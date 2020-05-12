@@ -1,0 +1,163 @@
+/* ステータス */
+/* 本体（自分） */
+.my_status {
+    background-color: lavender;
+    width: 400px;
+    height: 50px;
+    position: relative;
+    border: solid;
+    margin-top: 10px;
+}
+/* 名前（自分） */
+.my_name {
+    top: 13px;
+    left: 10px;
+    width: 180px;
+    height: 20px;
+    position: absolute;
+}
+/* 色（自分） */
+.my_color {
+    top: 5px;
+    right: 5px;
+    width: 40px;
+    height: 40px;
+    position: absolute;
+}
+/* 数（自分） */
+.my_num {
+    top: 5px;
+    right: 55px;
+    width: 40px;
+    height: 40px;
+    position: absolute;
+}
+
+/* 本体（相手） */
+.op_status {
+    background-color: lavender;
+    width: 400px;
+    height: 50px;
+    position: relative;
+    border: solid;
+    margin-bottom: 10px;
+}
+/* 名前（相手） */
+.op_name {
+    top: 13px;
+    left: 10px;
+    width: 180px;
+    height: 20px;
+    position: absolute;
+}
+/* 色（相手） */
+.op_color {
+    top: 5px;
+    right: 5px;
+    width: 40px;
+    height: 40px;
+    position: absolute;
+}
+/* 数（相手） */
+.op_num {
+    top: 5px;
+    right: 55px;
+    width: 40px;
+    height: 40px;
+    position: absolute;
+}
+/* アクティブプレイヤー */
+.active {
+    background-color: plum;
+}
+
+/* オセロ盤 */
+/* 本体 */
+.board {
+    width: 400px;
+    height: 400px;
+}
+/* 枠（オセロ版の右側と下側のみ） */
+.frame {
+    width: 100%;
+    height: 100%;
+    border-right: solid;
+    border-bottom: solid;
+    background-color: black;
+}
+/* 行 */
+.record {
+    width: 100%;
+    height: 12.5%;
+    display: flex;
+}
+/* マス（左と上の枠含む） */
+.square {
+    background-color: green;
+    width: 12.5%;
+    height: 100%;
+    box-sizing: border-box;
+    border-top: solid;
+    border-left: solid;
+    position: relative;
+}
+/* 白コマ */
+.piece_w {
+    background-color: white;
+    border-radius: 50%;
+    width: 83%;
+    height: 83%;
+    border-bottom: 0.25em solid black;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+/* 黒コマ */
+.piece_b {
+    background-color: black;
+    border-radius: 50%;
+    width: 88%;
+    height: 88%;
+    border-bottom: 0.1em solid white;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+/* 空きコマ */
+.piece_e {
+}
+/* 置ける場所マーク */
+.mark_v {
+    background-color: greenyellow;
+    opacity: 20%;
+    border-radius: 30%;
+    width: 25%;
+    height: 25%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%);
+}
+/* 最後に置いた場所マーク */
+.mark_l {
+    background-color: red;
+    border-radius: 30%;
+    width: 25%;
+    height: 25%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%);
+}
+/* 空きマーク */
+.mark_e {
+}
+
+/* メッセージボックス */
+.message_box {
+    width: 400px;
+    height: 50px;
+    margin-top: 10px;
+}
