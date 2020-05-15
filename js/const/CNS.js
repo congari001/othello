@@ -4,7 +4,6 @@ var CNS = CNS || (() => {
             "BLACK": "b",
             "WHITE": "w",
             "EMPTY": "e",
-            "VALID": "v",
         },
         "BOARD":{
             "RECORD_SIZE":8,

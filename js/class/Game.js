@@ -1,13 +1,13 @@
 class ClassGame extends ClassBase {
-    constructor(room_id) {
+    constructor() {
         super();
-        this.room_id = room_id;
-        this._initBoard();
-        this._initPlayer();
+        this._player = null;
+        this._InitEvent();
+        this._InitGuestSettings();
     }
 
     // ゲームの初期化処理
-    _initBoard() {
+    _InitBoard() {
         this.board_data = [
             ["e","e","e","e","e","e","e","e"],
             ["e","e","e","e","e","e","e","e"],
@@ -19,139 +19,149 @@ class ClassGame extends ClassBase {
             ["e","e","e","e","e","e","e","e"]
         ];
         this.put_log = [];
-        this.turn = 1;
-        this.now_color = "b";
+        this.now_guest = 0;
         this.is_start = false;
         this.pass_cnt = 0;
         this.last_put = null;
     }
-    // プレイヤーの初期化
-    _initPlayer() {
-        this.players = [];
+    // 参加者情報設定初期化
+    _InitGuestSettings() {
+        this.guest_settings = [{}, {}];
     }
-    // 参加する
-    Entry(name, user) {
-        var is_npc = ! user;
-        var player = new ClassPlayer(name, is_npc);
-        if (player.getClassName() != "ClassPlayer") {
-            throw new Error("プレイヤークラスを指定してください。");
-        }
-        if (this.players.length >= 2) {
-            throw new Error("プレイヤーはこれ以上参加できません。");
-        }
-        player.room_id = this.room_id;
-        this.players.push(player);
-        if (user) {
-            user.roomIn("room-"+this.room_id);
-        }
-        return player;
+    // 参加者情報初期化
+    _InitGuests() {
+        let name1, npc1, name2, npc2;
+        name1 = this.guest_settings[0].name || "プレイヤー１";
+        npc1  = this.guest_settings[0].npc  || false;
+        name2 = this.guest_settings[1].name || "プレイヤー２";
+        npc2  = this.guest_settings[1].npc  || true;
+        this.guests = [];
+        this.guests[0] = {name: name1, color: null, is_npc: npc1};
+        this.guests[1] = {name: name2, color: null, is_npc: npc2};
     }
-    // ゲームをリセットする
-    Restart() {
-        this._initBoard();
-        this.Start();
+    // イベントの初期化
+    _InitEvent() {
+        this.on("start", () => {
+            console.log("game start");
+            this.Start();
+        });
+        this.on("put", (event) => {
+            let pos = event.detail;
+            let color = this.guests[this.now_guest].color;
+            console.log(color+": 横"+(+pos.col+1)+" 縦"+(+pos.rec+1));
+            this.PutPiece(pos.rec, pos.col);
+        });
+        this.on("auto", () => {
+            if (this.guests[this.now_guest].is_npc) {
+                setTimeout(() => {
+                    let st = this._GetGameStatus();
+                    if (st.put_position.length) {
+                        let pos = st.put_position[Math.floor(Math.random() * st.put_position.length)];
+                        this.emit("put", {rec: pos.rec, col: pos.col});
+                    }
+                }, 1000);
+            }
+        });
+        this.on("result", () => {
+            console.log("game result");
+            this.GameResult();
+        });
+    }
+
+    // プレイヤーを割り当てる
+    SetPlayer(player) {
+        this._player = player;
+    }
+    // ゲーム設定
+    SetGuestSettings(target, name, npc) {
+        target = target ? 1: 0;
+        this.guest_settings[target] = {name: name, npc: npc};
     }
     // ゲームを開始する
     Start() {
-        if (this.is_start) {
-            return;
-        }
-        if (this.players.length < 2) {
-            for (let i=0; i < 2-this.players.length; i++) {
-                this.Entry("NPC:"+(i+1));
-            }
-        }
+        this._InitBoard();
+        this._InitGuests();
         let i;
         // 白黒判定
         let coin = Math.floor(Math.random() * 2);
-        this.players[coin].player_id = coin;
-        this.players[coin].color = CNS.PIECE.BLACK;
+        this.guests[coin].color = CNS.PIECE.BLACK;
+        this.now_guest = coin;
         coin ^= 1;
-        this.players[coin].player_id = coin;
-        this.players[coin].color = CNS.PIECE.WHITE;
+        this.guests[coin].color = CNS.PIECE.WHITE;
         // バトル開始
         this.is_start = true;
-        // 対戦画面初期化
-        let info = this.GetGameStatus();
-        this.emit("update_board", {info: info}, {room: "room-"+this.room_id});
-    }
-    // 現在のターンのプレイヤーを返す
-    GetNowPlayer() {
-        if (!this.is_start) {
-            throw new Error("ゲームが開始されていないため現在のターンのプレイヤーを取得できません。");
-        }
-        return this.players.filter((player)=>player.color==this.now_color)[0];
-    }
-    GetWaitPlayer() {
-        if (!this.is_start) {
-            throw new Error("ゲームが開始されていないため待機中のプレイヤーを取得できません。");
-        }
-        return this.players.filter((player)=>player.color!=this.now_color)[0];
+        this._player.emit("update_board", {info: this._GetGameStatus()});
+        this.emit("auto");
     }
     // コマを置く
     PutPiece(rec, col) {
         if (!this.is_start) {
-            throw new Error("ゲームが開始されていないため現在のターンのプレイヤーを取得できません。");
+            console.log("ゲームが開始されていないためコマを置けません。");
+            return;
         }
         let i,pos;
-        let my_player = this.GetNowPlayer();
-        let my_color = my_player.color;
-        let pieces = this.GetRevercePieceList(my_color, rec, col);
+        let color = this.guests[this.now_guest].color;
+        let pieces = this._GetRevercePieceList(color, rec, col);
         if (!pieces.length) {
             throw new Error("置けない場所が指定されました。");
         }
-        this.board_data[rec][col] = my_color;
+        this.board_data[rec][col] = color;
         this.put_log.push({rec:rec, col:col});
         this.last_put = {rec:rec, col:col};
         for (i=0; i<pieces.length; i++) {
             pos = pieces[i];
-            this.board_data[pos.rec][pos.col] = my_color;
+            this.board_data[pos.rec][pos.col] = color;
         }
-        this.NextTurn();
+        this._NextTurn();
     }
+    // ゲーム結果処理
+    GameResult() {
+        let st = this._GetGameStatus();
+        this._player.emit("update_board", {info: st});
+        this._player.emit("result", {info: st});
+        this.is_start = false;
+        setTimeout(() => {
+            this.emit("start");
+        }, 3500);
+    }
+
+    // プライベート
     // ターンを進める
-    NextTurn() {
+    _NextTurn() {
         if (this.pass_cnt >= 2) {　// 終了判定
-            let info = this.GetGameStatus();
-            this.emit("update_board", {info: info}, {room: "room-"+this.room_id});
-            this.emit("result", {info: info}, {room: "room-"+this.room_id});
-            this.is_start = false;
-            setTimeout(() => {
-                this.Restart();
-            }, 3500);
+            this.emit("result");
             return;
         }
-        this.turn++;
-        this.now_color = this.GetWaitPlayer().color;
-        if (this.IsPass()) {
+        this.now_guest ^= 1;
+        if (this._IsPass()) {
             this.pass_cnt++;
-            this.NextTurn();
-            return;
+            this._NextTurn();
+        }else{
+            this.pass_cnt = 0;
+            this._player.emit("update_board", {info: this._GetGameStatus()});
+            this.emit("auto");
         }
-        this.pass_cnt = 0;
-        let info = this.GetGameStatus();
-        this.emit("update_board", {info: info}, {room: "room-"+this.room_id});
     }
     // ゲームの情報を取得する
-    GetGameStatus() {
+    _GetGameStatus() {
         let res = {};
-        let board_info = this.GetBoardInfo();
-        res.put_position = this.GetPutPositionAll();
-        res.now_color = this.now_color;
-        res.my_name = this.players[0].name;
-        res.my_color = this.players[0].color;
-        res.my_score = board_info.score[this.players[0].color];
-        res.my_is_npc = !!this.players[0].is_npc;
-        res.op_name = this.players[1].name;
-        res.op_color = this.players[1].color;
-        res.op_score = board_info.score[this.players[1].color];
-        res.op_is_npc = !!this.players[1].is_npc;
+        let board_info = this._GetBoardInfo();
+        res.put_position = this._GetPutPositionAll();
+        res.now_color = this.guests[this.now_guest].color;
+        res.my_name = this.guests[0].name;
+        res.my_color = this.guests[0].color;
+        res.my_score = board_info.score[this.guests[0].color];
+        res.my_is_npc = !!this.guests[0].is_npc;
+        res.op_name = this.guests[1].name;
+        res.op_color = this.guests[1].color;
+        res.op_score = board_info.score[this.guests[1].color];
+        res.op_is_npc = !!this.guests[1].is_npc;
         res.board_data = board_info.board_data;
         res.last_put = this.last_put ? {rec:this.last_put.rec, col:this.last_put.col}: null;
         return res;
     }
     // 盤情報を取得する
-    GetBoardInfo() {
+    _GetBoardInfo() {
         let board_data = [];
         let score = {w:0, b:0};
         let rec,col,piece;
@@ -171,7 +181,7 @@ class ClassGame extends ClassBase {
         };
     }
     // 指定の位置の裏返せるコマ情報を取得する
-    GetRevercePieceList(my_color, rec, col) {
+    _GetRevercePieceList(my_color, rec, col) {
         let x,y;
         const dirs = [-1,0,1];
         let list = [];
@@ -185,13 +195,14 @@ class ClassGame extends ClassBase {
         return list;
     }
     // 置ける位置を全て取得する
-    GetPutPositionAll() {
-        let rec,col;
+    _GetPutPositionAll() {
+        let rec,col,now_color;
         let res = [];
+        now_color = this.guests[this.now_guest].color;
         for (rec=0; rec<this.board_data.length; rec++) {
             for (col=0; col<this.board_data[rec].length; col++) {
                 if (this.board_data[rec][col] == CNS.PIECE.EMPTY) {
-                    if (this.GetRevercePieceList(this.now_color, rec, col).length) {
+                    if (this._GetRevercePieceList(now_color, rec, col).length) {
                         res.push({rec:rec, col:col});
                     }
                 }
@@ -200,12 +211,13 @@ class ClassGame extends ClassBase {
         return res;
     }
     // パス判定
-    IsPass() {
-        let rec,col;
+    _IsPass() {
+        let rec,col,now_color;
+        now_color = this.guests[this.now_guest].color;
         for (rec=0; rec<this.board_data.length; rec++) {
             for (col=0; col<this.board_data[rec].length; col++) {
                 if (this.board_data[rec][col] == CNS.PIECE.EMPTY) {
-                    if (this.GetRevercePieceList(this.now_color, rec, col).length) {
+                    if (this._GetRevercePieceList(now_color, rec, col).length) {
                         return false;
                     }
                 }

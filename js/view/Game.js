@@ -166,7 +166,6 @@ var ViewGame = ViewGame || (() => {
     Obj.updateValidMarks = (pos_list) => {
         let i;
         for (i=0; i<pos_list.length; i++) {
-            
             Obj.getMarkElement(pos_list[i].rec, pos_list[i].col).className = "mark_v";
         }
     }
